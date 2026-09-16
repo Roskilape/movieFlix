@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import { ChevronRight, Heart } from "lucide-react-native";
+import React from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -18,6 +19,7 @@ import { useUserStore } from "../../store";
 
 const Profile = () => {
   const currentUser = useUserStore((state) => state.currentUser);
+  const [loading, setLoading] = React.useState(false);
   const {
     user: firebaseUser,
     isSignedIn,
@@ -26,6 +28,7 @@ const Profile = () => {
   } = useAuth();
 
   const loginWithGoogle = async () => {
+    setLoading(true);
     try {
       await signInWithGoogle();
     } catch (error) {
@@ -34,6 +37,8 @@ const Profile = () => {
         "Sign In Failed",
         error instanceof Error ? error.message : "Something went wrong",
       );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -84,7 +89,13 @@ const Profile = () => {
                 onPress={loginWithGoogle}
               >
                 <Image source={icons.google} className="w-12 h-10" />
-                <Text className="text-white text-xl">Continue with Google</Text>
+                {loading ? (
+                  <ActivityIndicator size="small" color="#0000ff" />
+                ) : (
+                  <Text className="text-white text-xl">
+                    Continue with Google
+                  </Text>
+                )}
               </TouchableOpacity>
               <TouchableOpacity
                 className="w-11/12 h-20 rounded-full overflow-hidden"

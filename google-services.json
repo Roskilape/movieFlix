@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "623075013529",
+    "project_id": "movieflix-af5d8",
+    "storage_bucket": "movieflix-af5d8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:623075013529:android:196eadb6acce1a33bb9908",
+        "android_client_info": {
+          "package_name": "com.roskylapes.movieflix"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "623075013529-la340cgpm3an1b7s6735epoht42qeem9.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.roskylapes.movieflix",
+            "certificate_hash": "136fe56226bc491fc65da21b7147d8eb7b2afe75"
+          }
+        },
+        {
+          "client_id": "623075013529-eto39qbdr9lvrm1kvastalqf008jf8o8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB0KWezurrcexR_lZiY1Z5lAUIKrB83eDw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "623075013529-eto39qbdr9lvrm1kvastalqf008jf8o8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "623075013529-iler5cisof84idvefg2m30crkalkpmhu.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.roskylapes.movieflix"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

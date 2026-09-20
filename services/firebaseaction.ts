@@ -3,11 +3,12 @@ import {
   arrayUnion,
   doc,
   getDoc,
+  onSnapshot,
   runTransaction,
   Timestamp,
   updateDoc,
 } from "firebase/firestore";
-import { TMDB_CONFIG } from "./api";
+import { fetchMovieDetails } from "./api";
 import { db } from "./firebase";
 
 export const storeUserProfile = async (
@@ -67,36 +68,6 @@ export const addToFavourites = async (
   }
 };
 
-// export const addToFavourites = async (
-//   userId: string,
-//   movieId: string,
-// ): Promise<void> => {
-//   try {
-//     const userRef = doc(db, "userProfiles", userId);
-
-//     return await runTransaction(db, async (transaction) => {
-//       const userDoc = await transaction.get(userRef);
-//       let updatedUserProfile: UserProfile;
-
-//       if (userDoc.exists()) {
-//         const userData = userDoc.data() as UserProfile;
-//         const favoriteMovie = Array.isArray(userData.favouriteMoviesId)
-//           ? userData.favouriteMoviesId
-//           : [];
-
-//         updatedUserProfile = {
-//           ...userData,
-//           favouriteMoviesId: [...favoriteMovie, movieId],
-//           updatedAt: new Date(),
-//         };
-//         transaction.update(userRef, updatedUserProfile);
-//       }
-//     });
-//   } catch (error) {
-//     console.error("failed to add movie to favourites", error);
-//   }
-// };
-
 export const getAllFavouriteMoviesId = async (
   userId: string,
 ): Promise<string[]> => {
@@ -119,42 +90,68 @@ export const removeFromFavourites = async (
   });
 };
 
-export const fetchFavouriteMoviesDetails = async (
+export const subscribeToFavouriteMovies = (
   userId: string,
-): Promise<MovieDetails[]> => {
-  try {
-    const userRef = doc(db, "userProfiles", userId);
-    const userSnapshot = await getDoc(userRef);
-    if (!userSnapshot.exists()) {
-      return [];
-    }
-    const userData = userSnapshot.data() as UserProfile;
+  {
+    onMovies,
+    onLoading,
+    onError,
+  }: {
+    onMovies: (movies: MovieDetails[]) => void;
+    onLoading: (loading: boolean) => void;
+    onError: (error: Error | null) => void;
+  },
+): (() => void) => {
+  let active = true;
+  let requestVersion = 0;
+  let previousIds: string | undefined;
 
-    const favouriteMoviesId = Array.isArray(userData.favouriteMoviesId)
-      ? userData.favouriteMoviesId
-      : [];
+  const unsubscribe = onSnapshot(
+    doc(db, "userProfiles", userId),
+    (snapshot) => {
+      const value = snapshot.data()?.favouriteMoviesId;
+      const ids: string[] = Array.isArray(value)
+        ? value.filter((id): id is string => typeof id === "string")
+        : [];
+      const idsKey = JSON.stringify(ids);
+      // Avoid fetching again when unrelated profile fields change.
+      if (idsKey === previousIds) return;
+      previousIds = idsKey;
+      const version = ++requestVersion;
+      onError(null);
+      if (ids.length === 0) {
+        onMovies([]);
+        onLoading(false);
+        return;
+      }
+      onLoading(true);
+      void Promise.all(ids.map(fetchMovieDetails))
+        .then((details: MovieDetails[]) => {
+          if (active && version === requestVersion) onMovies(details);
+        })
+        .catch((error: unknown) => {
+          if (active && version === requestVersion) {
+            previousIds = undefined;
+            onError(
+              error instanceof Error
+                ? error
+                : new Error("Failed to load saved movies"),
+            );
+          }
+        })
+        .finally(() => {
+          if (active && version === requestVersion) onLoading(false);
+        });
+    },
+    (error) => {
+      ++requestVersion;
+      onError(error);
+      onLoading(false);
+    },
+  );
 
-    if (favouriteMoviesId.length > 0) {
-      return await Promise.all(
-        favouriteMoviesId.map(async (movieId) => {
-          const response = await fetch(
-            `${TMDB_CONFIG.BASE_URL}/movie/${movieId}?api_key=${TMDB_CONFIG.API_KEY}`,
-            {
-              method: "GET",
-              headers: TMDB_CONFIG.headers,
-            },
-          );
-          if (!response.ok) throw new Error("failed to fetch movie details");
-
-          const data = (await response.json()) as MovieDetails;
-          return data;
-        }),
-      );
-    } else {
-      return [];
-    }
-  } catch (error) {
-    console.log("failed to fetch favourite movie details", error);
-    throw error;
-  }
+  return () => {
+    active = false;
+    unsubscribe();
+  };
 };

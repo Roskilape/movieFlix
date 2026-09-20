@@ -1,5 +1,4 @@
-import { useFocusEffect } from "expo-router";
-import { useCallback } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -11,30 +10,28 @@ import {
 import MovieCard from "../../../components/MovieCard";
 import { icons } from "../../../constants/icons";
 import { images } from "../../../constants/images";
-import { fetchFavouriteMoviesDetails } from "../../../services/firebaseaction";
-import useFetch from "../../../services/useFetch";
+import { subscribeToFavouriteMovies } from "../../../services/firebaseaction";
 import { useUserStore } from "../../store";
 
 const Saved = () => {
-  const currentUser = useUserStore((state) => state.currentUser);
+  const userId = useUserStore((state) => state.currentUser?.uid);
+  const [movies, setMovies] = useState<MovieDetails[]>([]);
+  const [moviesLoading, setMoviesLoading] = useState(true);
+  const [moviesError, setMoviesError] = useState<Error | null>(null);
 
-  const fetchSavedMovies = useCallback(async () => {
-    if (!currentUser) return [];
-    return (await fetchFavouriteMoviesDetails(currentUser.uid)) ?? [];
-  }, [currentUser?.uid]);
+  useEffect(() => {
+    setMovies([]);
+    setMoviesError(null);
+    setMoviesLoading(Boolean(userId));
+    if (!userId) return;
 
-  const {
-    data: movies,
-    loading: moviesLoading,
-    error: moviesError,
-    refresh,
-  } = useFetch(fetchSavedMovies, true);
+    return subscribeToFavouriteMovies(userId, {
+      onMovies: setMovies,
+      onLoading: setMoviesLoading,
+      onError: setMoviesError,
+    });
+  }, [userId]);
 
-  useFocusEffect(
-    useCallback(() => {
-      void refresh();
-    }, [refresh]),
-  );
   return (
     <View className="bg-primary flex-1">
       <Image source={images.bg} className="absolute w-full z-0" />
